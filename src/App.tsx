@@ -364,18 +364,25 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPass })
       });
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned non-JSON response. The API might be down or misconfigured.");
+      }
+
       const data = await res.json();
       if (data.success) {
         setUser(data.user);
         setConfigError(null);
       } else {
-        alert(data.message);
+        alert(data.message || 'Login failed');
       }
     } catch (err: any) {
-      if (err.message?.includes('Firebase not configured')) {
-        setConfigError('Firebase is not configured. Please set the environment variables.');
+      console.error("Login error:", err);
+      if (err.message?.includes('Firebase not configured') || err.message?.includes('non-JSON response')) {
+        setConfigError(err.message);
       } else {
-        alert('Login failed. Check if server is running and Firebase is configured.');
+        alert('Login failed. Check your internet connection or if the server is running.');
       }
     } finally {
       setLoading(false);

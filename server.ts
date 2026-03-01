@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import admin from "firebase-admin";
@@ -8,23 +7,34 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
-if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (e) {
-    console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON", e);
+let db: admin.firestore.Firestore | null = null;
+
+function initializeFirebase() {
+  if (db) return db;
+  
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+      }
+      db = admin.firestore();
+      return db;
+    } catch (e) {
+      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON", e);
+    }
   }
-} else {
-  console.warn("FIREBASE_SERVICE_ACCOUNT_JSON not found. Firebase Admin not initialized.");
+  return null;
 }
 
-const db = admin.apps.length ? admin.firestore() : null;
+// Initial attempt
+initializeFirebase();
 
 async function seedDatabase() {
-  if (!db) return;
+  const currentDb = initializeFirebase();
+  if (!currentDb) return;
 
   try {
     const usersSnapshot = await db.collection("users").limit(1).get();
@@ -221,11 +231,16 @@ app.use(express.json());
 // Seed database on startup
 await seedDatabase();
 
-  // Helper to check if DB is ready
-  const checkDb = (req: any, res: any, next: any) => {
-    if (!db) return res.status(500).json({ error: "Firebase not configured. Please set FIREBASE_SERVICE_ACCOUNT_JSON in environment variables." });
-    next();
-  };
+// Helper to check if DB is ready
+const checkDb = (req: any, res: any, next: any) => {
+  const currentDb = initializeFirebase();
+  if (!currentDb) return res.status(500).json({ 
+    success: false,
+    error: "Firebase not configured", 
+    message: "Please set FIREBASE_SERVICE_ACCOUNT_JSON in environment variables." 
+  });
+  next();
+};
 
   // Auth API
   app.post("/api/auth/login", checkDb, async (req, res) => {
@@ -375,19 +390,20 @@ await seedDatabase();
     res.json({ success: true });
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
-    });
-  }
+// Vite middleware for development
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  const { createServer: createViteServer } = await import("vite");
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+} else if (!process.env.VERCEL) {
+  app.use(express.static(path.join(__dirname, "dist")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+}
 
 if (!process.env.VERCEL) {
   app.listen(PORT, "0.0.0.0", () => {
