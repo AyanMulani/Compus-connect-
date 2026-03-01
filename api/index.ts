@@ -37,12 +37,12 @@ async function seedDatabase() {
   if (!currentDb) return;
 
   try {
-    const usersSnapshot = await db.collection("users").limit(1).get();
+    const usersSnapshot = await currentDb.collection("users").limit(1).get();
     if (usersSnapshot.empty) {
       console.log("Seeding database...");
 
       // Seed Super Admin User
-      await db.collection("users").doc("super_admin").set({
+      await currentDb.collection("users").doc("super_admin").set({
         email: "super@college.edu",
         password: "super123",
         name: "Super Administrator",
@@ -52,7 +52,7 @@ async function seedDatabase() {
       });
 
       // Seed Admin User
-      await db.collection("users").doc("admin_user").set({
+      await currentDb.collection("users").doc("admin_user").set({
         email: "admin@college.edu",
         password: "admin123",
         name: "System Administrator",
@@ -62,7 +62,7 @@ async function seedDatabase() {
       });
 
       // Seed Faculty User
-      await db.collection("users").doc("faculty_user").set({
+      await currentDb.collection("users").doc("faculty_user").set({
         email: "faculty@college.edu",
         password: "faculty123",
         name: "Dr. Smith",
@@ -72,7 +72,7 @@ async function seedDatabase() {
       });
 
       // Seed Student User
-      await db.collection("users").doc("student_user").set({
+      await currentDb.collection("users").doc("student_user").set({
         email: "student@college.edu",
         password: "student123",
         name: "John Student",
@@ -86,7 +86,7 @@ async function seedDatabase() {
       });
 
       // Seed Parent User
-      await db.collection("users").doc("parent_user").set({
+      await currentDb.collection("users").doc("parent_user").set({
         email: "parent@gmail.com",
         password: "parent123",
         name: "Mr. Doe",
@@ -101,7 +101,7 @@ async function seedDatabase() {
         { title: "Annual Sports Meet", content: "The annual sports meet will be held next month. Register now!", author_id: "admin_user", author_name: "System Admin" }
       ];
       for (const ann of announcements) {
-        await db.collection("announcements").add({
+        await currentDb.collection("announcements").add({
           ...ann,
           created_at: admin.firestore.FieldValue.serverTimestamp()
         });
@@ -114,7 +114,7 @@ async function seedDatabase() {
         { title: "Design Patterns", author: "Erich Gamma", isbn: "978-0201633610", status: "available" }
       ];
       for (const book of books) {
-        await db.collection("library_books").add(book);
+        await currentDb.collection("library_books").add(book);
       }
 
       // Seed Placements
@@ -123,7 +123,7 @@ async function seedDatabase() {
         { company: "Microsoft", role: "Product Manager", package: "38 LPA", deadline: "2026-04-15", description: "Join our product team." }
       ];
       for (const p of placements) {
-        await db.collection("placements").add(p);
+        await currentDb.collection("placements").add(p);
       }
 
       // Seed Events
@@ -132,7 +132,7 @@ async function seedDatabase() {
         { title: "Tech Symposium", date: "2026-04-10", location: "Auditorium", description: "Explore the latest in tech." }
       ];
       for (const e of events) {
-        await db.collection("events").add(e);
+        await currentDb.collection("events").add(e);
       }
 
       // Seed Timetable
@@ -142,7 +142,7 @@ async function seedDatabase() {
         { day: "Tuesday", time_slot: "11:00 - 12:00", subject: "Computer Networks", room: "Room 103" }
       ];
       for (const t of timetable) {
-        await db.collection("timetable").add(t);
+        await currentDb.collection("timetable").add(t);
       }
 
       // Seed Attendance
@@ -151,7 +151,7 @@ async function seedDatabase() {
         { student_id: "student_user", subject: "Operating Systems", date: "2026-03-01", status: "absent" }
       ];
       for (const a of attendance) {
-        await db.collection("attendance").add(a);
+        await currentDb.collection("attendance").add(a);
       }
 
       // Seed Assignments
@@ -160,11 +160,11 @@ async function seedDatabase() {
         { title: "Process Scheduling", subject: "Operating Systems", deadline: "2026-03-15", status: "submitted", description: "Simulate FCFS and SJF scheduling algorithms." }
       ];
       for (const asgn of assignments) {
-        await db.collection("assignments").add({ ...asgn, student_id: "student_user" });
+        await currentDb.collection("assignments").add({ ...asgn, student_id: "student_user" });
       }
 
       // Seed Hostel
-      await db.collection("hostel").doc("student_user").set({
+      await currentDb.collection("hostel").doc("student_user").set({
         block: "A",
         room_no: "302",
         type: "Double Sharing",
@@ -173,7 +173,7 @@ async function seedDatabase() {
       });
 
       // Seed Transport
-      await db.collection("transport").add({
+      await currentDb.collection("transport").add({
         route_no: "12",
         bus_no: "KA-01-F-1234",
         driver: "Ramesh",
@@ -183,7 +183,7 @@ async function seedDatabase() {
       });
 
       // Seed Grievances
-      await db.collection("grievances").add({
+      await currentDb.collection("grievances").add({
         student_id: "student_user",
         category: "Infrastructure",
         subject: "Wi-Fi not working in Library",
@@ -195,11 +195,11 @@ async function seedDatabase() {
       // Seed Departments
       const depts = ["Computer Science", "Information Technology", "Electronics", "Mechanical", "Civil"];
       for (const d of depts) {
-        await db.collection("departments").add({ name: d, head: "Dr. " + d.split(' ')[0] });
+        await currentDb.collection("departments").add({ name: d, head: "Dr. " + d.split(' ')[0] });
       }
 
       // Seed Audit Logs
-      await db.collection("audit_logs").add({
+      await currentDb.collection("audit_logs").add({
         user_id: "admin_user",
         action: "Updated Fee Structure",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -213,7 +213,7 @@ async function seedDatabase() {
         { description: "Library Fine", amount: 50, status: "unpaid", due_date: "2026-03-20", student_id: "student_user" }
       ];
       for (const f of fees) {
-        await db.collection("fees").add(f);
+        await currentDb.collection("fees").add(f);
       }
 
       console.log("Database seeded successfully!");
@@ -228,8 +228,8 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Seed database on startup
-await seedDatabase();
+// Seed database on startup (background)
+seedDatabase();
 
 // Helper to check if DB is ready
 const checkDb = (req: any, res: any, next: any) => {
