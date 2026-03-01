@@ -216,6 +216,24 @@ async function seedDatabase() {
         await currentDb.collection("fees").add(f);
       }
 
+      // Seed Marks
+      const marks = [
+        { student_id: "student_user", subject: "Data Structures", internal: 28, external: 65, total: 93, grade: "O" },
+        { student_id: "student_user", subject: "Operating Systems", internal: 25, external: 60, total: 85, grade: "A+" }
+      ];
+      for (const m of marks) {
+        await currentDb.collection("marks").add(m);
+      }
+
+      // Seed Syllabus
+      const syllabus = [
+        { subject: "Computer Science - Core", semester: 6, file_url: "#" },
+        { subject: "Mathematics for Engineers", semester: 6, file_url: "#" }
+      ];
+      for (const s of syllabus) {
+        await currentDb.collection("syllabus").add(s);
+      }
+
       console.log("Database seeded successfully!");
     }
   } catch (error) {
@@ -385,6 +403,56 @@ const checkDb = (req: any, res: any, next: any) => {
       content,
       author_id,
       author_name,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ success: true });
+  });
+
+  // User Management
+  app.get("/api/users", checkDb, async (req, res) => {
+    const { role } = req.query;
+    let query: any = db!.collection("users");
+    if (role) {
+      query = query.where("role", "==", role);
+    }
+    const snapshot = await query.get();
+    res.json(snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
+  });
+
+  app.post("/api/users", checkDb, async (req, res) => {
+    const userData = req.body;
+    const docRef = await db!.collection("users").add({
+      ...userData,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ success: true, id: docRef.id });
+  });
+
+  // Marks Management
+  app.get("/api/marks/:studentId", checkDb, async (req, res) => {
+    const snapshot = await db!.collection("marks").where("student_id", "==", req.params.studentId).get();
+    res.json(snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
+  });
+
+  app.post("/api/marks", checkDb, async (req, res) => {
+    const marksData = req.body;
+    await db!.collection("marks").add({
+      ...marksData,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ success: true });
+  });
+
+  // Syllabus Management
+  app.get("/api/syllabus", checkDb, async (req, res) => {
+    const snapshot = await db!.collection("syllabus").get();
+    res.json(snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
+  });
+
+  app.post("/api/syllabus", checkDb, async (req, res) => {
+    const syllabusData = req.body;
+    await db!.collection("syllabus").add({
+      ...syllabusData,
       created_at: admin.firestore.FieldValue.serverTimestamp()
     });
     res.json({ success: true });

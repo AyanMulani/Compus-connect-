@@ -39,7 +39,9 @@ import {
   Shield,
   FileSearch,
   Building,
-  History
+  History,
+  UserPlus,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -237,6 +239,10 @@ export default function App() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
+  const [faculty, setFaculty] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [studentMarks, setStudentMarks] = useState<any[]>([]);
+  const [syllabus, setSyllabus] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
@@ -253,6 +259,7 @@ export default function App() {
       fetchEvents();
       fetchTimetable();
       fetchTransport();
+      fetchSyllabus();
       if (user.role === 'student' || user.role === 'parent') {
         const targetId = user.role === 'parent' ? user.student_id : user.id;
         fetchFees(targetId);
@@ -261,10 +268,16 @@ export default function App() {
         fetchHostel(targetId);
         fetchGrievances(targetId);
         fetchPerformance(targetId);
+        fetchStudentMarks(targetId);
       }
       if (user.role === 'admin' || user.role === 'super_admin') {
         fetchDepartments();
         fetchAuditLogs();
+        fetchFaculty();
+        fetchAllStudents();
+      }
+      if (user.role === 'faculty') {
+        fetchAllStudents();
       }
     }
   }, [user]);
@@ -355,6 +368,30 @@ export default function App() {
     setEvents(data);
   };
 
+  const fetchFaculty = async () => {
+    const res = await fetch('/api/users?role=faculty');
+    const data = await res.json();
+    setFaculty(data);
+  };
+
+  const fetchAllStudents = async () => {
+    const res = await fetch('/api/users?role=student');
+    const data = await res.json();
+    setAllStudents(data);
+  };
+
+  const fetchStudentMarks = async (studentId: string) => {
+    const res = await fetch(`/api/marks/${studentId}`);
+    const data = await res.json();
+    setStudentMarks(data);
+  };
+
+  const fetchSyllabus = async () => {
+    const res = await fetch('/api/syllabus');
+    const data = await res.json();
+    setSyllabus(data);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -426,7 +463,11 @@ export default function App() {
     { id: 'transport', label: 'Transport', icon: Truck, roles: ['super_admin', 'admin', 'student', 'parent'] },
     { id: 'grievances', label: 'Grievances', icon: AlertCircle, roles: ['super_admin', 'admin', 'student'] },
     { id: 'departments', label: 'Departments', icon: Building, roles: ['super_admin', 'admin'] },
-    { id: 'users', label: 'Users', icon: Users, roles: ['super_admin', 'admin'] },
+    { id: 'manage_faculty', label: 'Manage Faculty', icon: UserPlus, roles: ['super_admin', 'admin'] },
+    { id: 'manage_students', label: 'Manage Students', icon: Users, roles: ['faculty'] },
+    { id: 'upload_marks', label: 'Upload Marks', icon: FileText, roles: ['super_admin', 'admin', 'faculty'] },
+    { id: 'results', label: 'My Results', icon: Award, roles: ['student'] },
+    { id: 'syllabus', label: 'Syllabus', icon: FileSearch, roles: ['super_admin', 'admin', 'faculty', 'student'] },
     { id: 'audit_logs', label: 'Audit Logs', icon: History, roles: ['super_admin'] },
     { id: 'mobile_app', label: 'Mobile App', icon: Smartphone, roles: ['super_admin', 'admin', 'faculty', 'student', 'parent'] },
   ];
@@ -1318,6 +1359,164 @@ export default function App() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {view === 'manage_faculty' && (
+            <motion.div key="manage_faculty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-slate-900">Faculty Management</h3>
+                  <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center text-sm">
+                    <UserPlus size={18} className="mr-2" /> Add Faculty
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {faculty.map(f => (
+                    <div key={f.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex items-center space-x-4">
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                        {f.name[0]}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{f.name}</h4>
+                        <p className="text-sm text-slate-500">{f.email}</p>
+                        <p className="text-xs text-indigo-600 font-bold mt-1">{f.department}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {view === 'manage_students' && (
+            <motion.div key="manage_students" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-slate-900">Student Management</h3>
+                  <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center text-sm">
+                    <Plus size={18} className="mr-2" /> Add Student
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {allStudents.map(s => (
+                    <div key={s.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex items-center space-x-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg">
+                        {s.name[0]}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{s.name}</h4>
+                        <p className="text-sm text-slate-500">{s.email}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded font-bold">Sem {s.semester}</span>
+                          <span className="text-xs text-slate-400">ID: {s.id_number}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {view === 'upload_marks' && (
+            <motion.div key="upload_marks" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card>
+                <h3 className="text-xl font-bold text-slate-900 mb-6">Upload Student Marks</h3>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <select className="px-4 py-2 rounded-lg border border-slate-200 outline-none text-sm">
+                      <option>Select Student</option>
+                      {allStudents.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id_number})</option>)}
+                    </select>
+                    <input type="text" placeholder="Subject Name" className="px-4 py-2 rounded-lg border border-slate-200 outline-none text-sm" />
+                    <input type="number" placeholder="Marks (Out of 100)" className="px-4 py-2 rounded-lg border border-slate-200 outline-none text-sm" />
+                  </div>
+                  <button className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-all">
+                    Submit Marks
+                  </button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {view === 'results' && (
+            <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-slate-900">Academic Results</h3>
+                  <button className="text-indigo-600 font-bold flex items-center text-sm hover:underline">
+                    <Download size={18} className="mr-2" /> Download Marksheet
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 text-sm">
+                        <th className="pb-4 font-medium">Subject</th>
+                        <th className="pb-4 font-medium">Internal</th>
+                        <th className="pb-4 font-medium">External</th>
+                        <th className="pb-4 font-medium">Total</th>
+                        <th className="pb-4 font-medium">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {studentMarks.length > 0 ? studentMarks.map((m: any) => (
+                        <tr key={m.id} className="text-slate-700">
+                          <td className="py-4 font-bold">{m.subject}</td>
+                          <td className="py-4">{m.internal || 25}</td>
+                          <td className="py-4">{m.external || 65}</td>
+                          <td className="py-4 font-bold text-indigo-600">{m.total || 90}</td>
+                          <td className="py-4">
+                            <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded text-xs font-bold">A+</span>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr className="text-slate-700">
+                          <td className="py-4 font-bold">Data Structures</td>
+                          <td className="py-4">28</td>
+                          <td className="py-4">65</td>
+                          <td className="py-4 font-bold text-indigo-600">93</td>
+                          <td className="py-4">
+                            <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded text-xs font-bold">O</span>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {view === 'syllabus' && (
+            <motion.div key="syllabus" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card>
+                <h3 className="text-xl font-bold text-slate-900 mb-6">Course Syllabus</h3>
+                <div className="space-y-4">
+                  {syllabus.length > 0 ? syllabus.map((s: any) => (
+                    <div key={s.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{s.subject}</h4>
+                        <p className="text-sm text-slate-500">Semester {s.semester}</p>
+                      </div>
+                      <button className="text-indigo-600 font-bold flex items-center text-sm hover:underline">
+                        <Download size={18} className="mr-2" /> View PDF
+                      </button>
+                    </div>
+                  )) : (
+                    <div className="p-6 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold text-slate-900">Computer Science - Core</h4>
+                        <p className="text-sm text-slate-500">Semester 6</p>
+                      </div>
+                      <button className="text-indigo-600 font-bold flex items-center text-sm hover:underline">
+                        <Download size={18} className="mr-2" /> View PDF
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
             </motion.div>
